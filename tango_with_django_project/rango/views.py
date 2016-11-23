@@ -1,6 +1,6 @@
 from django.shortcuts import render
 # Import Category Model
-from rango.models import Category
+from rango.models import Category, Page
 
 
 # Create your views here.
@@ -20,3 +20,11 @@ def index(request):
 
     # Return the reponse and send it back!
     return render(request, 'rango/index.html', context=context_dict)
+
+
+def show_category(request, category_name_slug):
+
+    # Create a context dictionary whidh we can pass
+    # to the template rendering engine
+    context_dict = {}
+
