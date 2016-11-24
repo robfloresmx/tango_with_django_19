@@ -1,6 +1,7 @@
 from django.shortcuts import render
 # Import Category Model
 from rango.models import Category, Page
+from rango.forms import CategoryForm
 
 
 # Create your views here.
@@ -52,3 +53,27 @@ def show_category(request, category_name_slug):
         context_dict['pages'] = None
 
     return render(request, 'rango/category.html', context_dict)
+
+
+def add_category(request):
+    form = CategoryForm()
+
+    # AN HTTP POST?
+    if request.method == 'POST':
+        form = CategoryForm(request.POST)
+
+        # Have we been provided with a valid form?
+        if form.is_valid():
+            # Save the new category to the database.
+            form.save(commit=True)
+            # Now that the category is saved
+            # We could give a confirmation message
+            # But since the most recent category added is on the index page
+            # Then we can direct the user back to the index page.
+            return index(request)
+        else:
+            # The supplied form contained errors -
+            # just print them to the terminal
+            print(form.errors)
+
+    return render(request, 'rango/add_category.html', {'form': form})
