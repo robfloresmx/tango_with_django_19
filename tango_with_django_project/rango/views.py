@@ -1,8 +1,9 @@
 from django.shortcuts import render
 from rango.models import Category, Page
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.http import HttpResponseRedirect, HttpResponse
 from django.core.urlresolvers import reverse
+from django.contrib.auth.decorators import login_required
 from rango.forms import CategoryForm, PageForm, UserForm, UserProfileForm
 
 
@@ -207,3 +208,20 @@ def user_login(request):
     else:
         # No context variable to pass to the template system, hence a blank dictionary
         return render(request, 'rango/login.html', {})
+
+
+# LOG OUT VIEW
+# Use the login_required decorator to ensure that only logged in users and log out
+@login_required
+def user_logout(request):
+    # Since we know the user is logged in, we can now just log them out.
+    logout(request)
+    # Take the user back to the homepage
+    return HttpResponseRedirect(reverse('index'))
+
+
+# RESTRICTED VIEW
+# This annotation is a Django decorator
+@login_required
+def restricted(request):
+    return HttpResponse("Since you're logged in, you can see this text")
