@@ -34,6 +34,10 @@ def index(request):
     return response
 
 
+def about(request):
+    return render(request, 'rango/about.html', {})
+
+
 def show_category(request, category_name_slug):
     # Create a context dictionary whidh we can pass
     # to the template rendering engine
