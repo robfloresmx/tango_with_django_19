@@ -7,8 +7,17 @@ Rango!
 
 
 {% block body_block %}
-    <div>
-        <h1>Top 5 Categories</h1>
+<div class="jumbotron">
+    <h1 class="display-3">Rango says ... </h1>
+    {% if user.is_authenticated %}
+    <h1>Hey there {{ user.username }}</h1>
+    {% else %}
+    <h1>Hey there partner!</h1>
+    {% endif %}
+</div>
+<div class="row marketing">
+    <div class="col-lg-6">
+        <p><h4>Most Liked Categories</h4></p>
         {% if categories %}
         <ul>
             {% for category in categories %}
@@ -17,12 +26,12 @@ Rango!
             </li>
             {% endfor %}
         </ul>
-        {% else %}
-        <strong>There are no categories present.</strong>
-        {% endif %}
     </div>
-    <div>
-        <h1>Top 5 Pages</h1>
+    {% else %}
+    <strong>There are no categories present.</strong>
+    {% endif %}
+    <div class="col-lg-6">
+        <p><h4>Most Viewed Pages</h4></p>
         {% if pages %}
         <ul>
             {% for page in pages %}
@@ -35,4 +44,5 @@ Rango!
         <strong>No pages to display</strong>
         {% endif %}
     </div>
+</div>
 {% endblock %}
