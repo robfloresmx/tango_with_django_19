@@ -6,6 +6,7 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
 from rango.forms import CategoryForm, PageForm, UserForm, UserProfileForm
 from datetime import datetime
+import requests
 
 
 # Create your views here.
@@ -26,6 +27,9 @@ def index(request):
 
     visitor_cookie_handler(request)
     context_dict['visits'] = request.session['visits']
+
+    # Test : print client_id
+    print(str(request.session['client_id']))
 
     # Obtain our Response object early so we can add cookie information
     response = render(request, 'rango/index.html', context_dict)
@@ -262,9 +266,54 @@ def visitor_cookie_handler(request):
     # Update/set the visits cookie
     request.session['visits'] = visits
 
+    # Set the clientId cookie
+    client_id_response = get_client_id()
+    if client_id_response:
+        request.session['client_id'] = client_id_response["id"]
+
+    client_id = str(request.session['client_id'])
+
+    extra_headers = {'X-Client-Id', client_id}
+    auth_token_response = get_auth_token(extra_headers)
+    if auth_token_response:
+        request.session['authToken'] = auth_token_response["authToken"]
+
 
 def get_server_side_cookie(request, cookie, default_val=None):
     val = request.session.get(cookie)
     if not val:
         val = default_val
     return val
+
+
+def get_client_id():
+    url = "https://preprod.mobile.trycasa.com/v1/clients/client-ids"
+    return send_request(url, {}, {})
+
+
+def get_auth_token(extra_headers):
+    url = "https://preprod.mobile.trycasa.com/v1/clients/auth-tokens"
+    return send_request(url,
+                        {}
+                        , extra_headers)
+
+
+def send_request(url, data, extra_headers):
+    headers = get_headers()
+    if extra_headers:
+        headers.update(extra_headers)
+    response = requests.post(url, verify=False, data=data, headers=headers)
+    if response:
+        response = response.json()
+    return response
+
+
+def get_headers():
+    headers = {"X-Api-Username": "Api-Username",
+               "X-Api-Password": "Api-Password",
+               "X-Device-Id": "deviceId",
+               "X-App-Version": "1.80",
+               "organizationID": "",
+               "projectID": "",
+               "appID": ""}
+    return headers
