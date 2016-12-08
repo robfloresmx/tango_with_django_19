@@ -7,6 +7,8 @@ from django.contrib.auth.decorators import login_required
 from rango.forms import CategoryForm, PageForm, UserForm, UserProfileForm
 from datetime import datetime
 import requests
+import logging
+import http.client as http_client
 
 
 # Create your views here.
@@ -28,8 +30,13 @@ def index(request):
     visitor_cookie_handler(request)
     context_dict['visits'] = request.session['visits']
 
-    # Test : print client_id
-    print(str(request.session['client_id']))
+    # Test : print client_id and auth_token
+    print("Client ID: " + str(request.session['client_id']))
+    print("Auth Token: " + str(request.session['authToken']))
+    if request.session.get("user_id"):
+        print("CASA UserID:" + str(request.session['user_id']))
+        context_dict['casa_user'] = True
+        context_dict['casa_user_name'] = str(request.session['user_first_name'])
 
     # Obtain our Response object early so we can add cookie information
     response = render(request, 'rango/index.html', context_dict)
@@ -184,6 +191,7 @@ def register(request):
 
 #   USER_LOGIN VIEW
 def user_login(request):
+    set_debug_for_requests()
     # If the request is a POST request, try to pull out the relevant information.
     if request.method == 'POST':
         # Gather the username and password provided by the user.
@@ -198,25 +206,44 @@ def user_login(request):
 
         # Use Django's machinery to attempt to see if the username/password
         # combination is valid - a User object is returned if it is.
-        user = authenticate(username=username, password=password)
+        # user = authenticate(username=username, password=password)
 
-        # If we have a User object, the details are correct.
-        # If None (Python's way of representing the absence of value), no user
-        # with matching credentials was found.
-        if user:
-            # Is the account active? It could have been disabled
-            if user.is_active:
-                # If the account is valid and active, we can log the user in.
-                # We'll the user back to the homepage.
-                login(request, user)
-                return HttpResponseRedirect(reverse('index'))
-            else:
-                # An inactive user account was used - no logging in!
-                return HttpResponse("Your Rango account is disabled.")
+        # We will use the CASA login for testing purposes
+        client_id = str(request.session['client_id'])
+        auth_token = str(request.session['authToken'])
+
+        extra_headers = {'X-Client-Id': client_id, 'X-Auth-Token': auth_token}
+        login_data = {'email': username, 'password': password}
+
+        login_response = login_to_casa_app(extra_headers, login_data)
+
+        if 'id' in login_response:
+            request.session['user_id'] = login_response['id']
+            request.session['user_first_name'] = login_response['firstName']
+            request.session['user_last_name'] = login_response['lastName']
+            request.session['user_e_mail'] = login_response['email']
+            return HttpResponseRedirect(reverse('index'))
         else:
-            # Bad Login details were provided. So we can't log the user in.
-            print("Invaled login details: {0}, {1}".format(username, password))
             return HttpResponse("Invalid login details supplied.")
+
+
+            # If we have a User object, the details are correct.
+            # If None (Python's way of representing the absence of value), no user
+            # with matching credentials was found.
+            # if user:
+            # Is the account active? It could have been disabled
+            # if user.is_active:
+            # If the account is valid and active, we can log the user in.
+            # We'll send the user back to the homepage.
+            # login(request, user)
+            # return HttpResponseRedirect(reverse('index'))
+            # else:
+            # An inactive user account was used - no logging in!
+            # return HttpResponse("Your Rango account is disabled.")
+            # else:
+            # Bad Login details were provided. So we can't log the user in.
+            # print("Invaled login details: {0}, {1}".format(username, password))
+            # return HttpResponse("Invalid login details supplied.")
 
             # The request is not a POST, display the login form.
             # This scenario would most likely be an HTTP GET
@@ -266,17 +293,18 @@ def visitor_cookie_handler(request):
     # Update/set the visits cookie
     request.session['visits'] = visits
 
-    # Set the clientId cookie
-    client_id_response = get_client_id()
-    if client_id_response:
-        request.session['client_id'] = client_id_response["id"]
+    if not request.session['client_id']:
+        # Set the clientId cookie
+        client_id_response = get_client_id()
+        if client_id_response:
+            request.session['client_id'] = client_id_response["id"]
 
-    client_id = str(request.session['client_id'])
+        client_id = str(request.session['client_id'])
 
-    extra_headers = {'X-Client-Id', client_id}
-    auth_token_response = get_auth_token(extra_headers)
-    if auth_token_response:
-        request.session['authToken'] = auth_token_response["authToken"]
+        extra_headers = {'X-Client-Id': client_id}
+        auth_token_response = get_auth_token(extra_headers)
+        if auth_token_response:
+            request.session['authToken'] = auth_token_response["authToken"]
 
 
 def get_server_side_cookie(request, cookie, default_val=None):
@@ -293,16 +321,19 @@ def get_client_id():
 
 def get_auth_token(extra_headers):
     url = "https://preprod.mobile.trycasa.com/v1/clients/auth-tokens"
-    return send_request(url,
-                        {}
-                        , extra_headers)
+    return send_request(url, {}, extra_headers)
 
 
-def send_request(url, data, extra_headers):
+def login_to_casa_app(extra_headers, json_body):
+    url = "https://preprod.mobile.trycasa.com/v1/customers/login"
+    return send_request(url, json_body, extra_headers)
+
+
+def send_request(url, json_body, extra_headers):
     headers = get_headers()
     if extra_headers:
         headers.update(extra_headers)
-    response = requests.post(url, verify=False, data=data, headers=headers)
+    response = requests.post(url, verify=False, json=json_body, headers=headers)
     if response:
         response = response.json()
     return response
@@ -317,3 +348,13 @@ def get_headers():
                "projectID": "",
                "appID": ""}
     return headers
+
+
+# Function to set up request debugging
+def set_debug_for_requests():
+    http_client.HTTPConnection.debuglevel = 1
+    logging.basicConfig()
+    logging.getLogger().setLevel(logging.DEBUG)
+    log = logging.getLogger("requests.packages.urllib3")
+    log.setLevel(logging.DEBUG)
+    log.propagate = True
