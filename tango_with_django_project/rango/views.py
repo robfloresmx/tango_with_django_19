@@ -329,6 +329,11 @@ def login_to_casa_app(extra_headers, json_body):
     return send_request(url, json_body, extra_headers)
 
 
+def logout_of_casa(extra_headers, json_body):
+    url = "https://preprod.mobile.trycasa.com/v1/customers/logout"
+    return send_request(url, json_body, extra_headers)
+
+
 def send_request(url, json_body, extra_headers):
     headers = get_headers()
     if extra_headers:
