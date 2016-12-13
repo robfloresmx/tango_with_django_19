@@ -293,7 +293,7 @@ def visitor_cookie_handler(request):
     # Update/set the visits cookie
     request.session['visits'] = visits
 
-    if not request.session['client_id']:
+    if not request.session.get('client_id'):
         # Set the clientId cookie
         client_id_response = get_client_id()
         if client_id_response:
