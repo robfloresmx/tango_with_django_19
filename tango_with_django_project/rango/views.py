@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from rango.models import Category, Page
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import logout
 from django.http import HttpResponseRedirect, HttpResponse
 from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import login_required
@@ -269,6 +269,20 @@ def restricted(request):
     return HttpResponse("Since you're logged in, you can see this text")
 
 
+@login_required
+def like_category(request):
+    if request.method == 'GET':
+        cat_id = request.GET['category_id']
+        likes = 0
+        if cat_id:
+            cat = Category.objects.get(id=int(cat_id))
+            if cat:
+                likes = cat.likes + 1
+                cat.likes = likes
+                cat.save()
+        return HttpResponse(likes)
+
+
 # HELPER FUNCTIONS
 def visitor_cookie_handler(request):
     # Get the number of visits to the site.
@@ -282,7 +296,7 @@ def visitor_cookie_handler(request):
 
     # If it's been more than a day since the last visit ...
     if (datetime.now() - last_visit_time).days > 0:
-        visits = visits + 1
+        visits += 1
         # update the last visit cookie now that we have updated the count
         request.session['last_visit'] = str(datetime.now())
     else:
