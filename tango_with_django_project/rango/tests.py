@@ -6,7 +6,7 @@ from django.core.urlresolvers import reverse
 # Helpers
 
 def add_cat(name, views, likes):
-    c = Category(name="test", views=views, likes=likes)
+    c = Category(name=name, views=views, likes=likes)
     setattr(c, 'views', views)
     setattr(c, 'likes', likes)
     c.save()
